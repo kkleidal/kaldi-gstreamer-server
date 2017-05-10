@@ -41,7 +41,7 @@ class ServerWebsocket(WebSocketClient):
     STATE_FINISHED = 100
 
     def __init__(self, uri, decoder_pipeline, post_processor, full_post_processor=None):
-        self.last_audio_message = time.Time()
+        self.last_audio_message = time.time()
         self.uri = uri
         self.decoder_pipeline = decoder_pipeline
         self.post_processor = post_processor
@@ -108,7 +108,7 @@ class ServerWebsocket(WebSocketClient):
         else:
             if self.state != self.STATE_CANCELLING and self.state != self.STATE_EOS_RECEIVED and self.state != self.STATE_FINISHED:
                 if isinstance(m, ws4py.messaging.BinaryMessage):
-                    self.last_audio_message = time.Time()
+                    self.last_audio_message = time.time()
                     self.decoder_pipeline.process_data(m.data)
                     self.state = self.STATE_PROCESSING
                 elif isinstance(m, ws4py.messaging.TextMessage):
