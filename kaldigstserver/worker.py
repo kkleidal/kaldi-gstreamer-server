@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 CONNECT_TIMEOUT = 5
 SILENCE_TIMEOUT = 5
+NO_AUDIO_TIMEOUT = 15
 USE_NNET2 = False
 
 class ServerWebsocket(WebSocketClient):
@@ -40,6 +41,7 @@ class ServerWebsocket(WebSocketClient):
     STATE_FINISHED = 100
 
     def __init__(self, uri, decoder_pipeline, post_processor, full_post_processor=None):
+        self.last_audio_message = time.Time()
         self.uri = uri
         self.decoder_pipeline = decoder_pipeline
         self.post_processor = post_processor
@@ -70,7 +72,7 @@ class ServerWebsocket(WebSocketClient):
     def guard_timeout(self):
         global SILENCE_TIMEOUT
         while self.state in [self.STATE_EOS_RECEIVED, self.STATE_CONNECTED, self.STATE_INITIALIZED, self.STATE_PROCESSING]:
-            if SILENCE_TIMEOUT >= 0 and time.time() - self.last_decoder_message > SILENCE_TIMEOUT:
+            if (time.time() - self.last_audio_message > NO_AUDIO_TIMEOUT) or (SILENCE_TIMEOUT >= 0 and time.time() - self.last_decoder_message > SILENCE_TIMEOUT):
                 logger.warning("%s: More than %d seconds from last decoder hypothesis update, cancelling" % (self.request_id, SILENCE_TIMEOUT))
                 self.finish_request()
                 event = dict(status=common.STATUS_NO_SPEECH)
@@ -106,6 +108,7 @@ class ServerWebsocket(WebSocketClient):
         else:
             if self.state != self.STATE_CANCELLING and self.state != self.STATE_EOS_RECEIVED and self.state != self.STATE_FINISHED:
                 if isinstance(m, ws4py.messaging.BinaryMessage):
+                    self.last_audio_message = time.Time()
                     self.decoder_pipeline.process_data(m.data)
                     self.state = self.STATE_PROCESSING
                 elif isinstance(m, ws4py.messaging.TextMessage):
