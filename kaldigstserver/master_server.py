@@ -261,6 +261,7 @@ class WorkerSocketHandler(tornado.websocket.WebSocketHandler):
 
     def on_message(self, message):
         assert self.client_socket is not None
+        logging.info("Message from worker: %s", message)
         event = json.loads(message)
         self.client_socket.send_event(event)
 
