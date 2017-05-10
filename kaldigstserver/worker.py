@@ -41,7 +41,6 @@ class ServerWebsocket(WebSocketClient):
     STATE_FINISHED = 100
 
     def __init__(self, uri, decoder_pipeline, post_processor, full_post_processor=None):
-        self.last_audio_message = time.time()
         self.uri = uri
         self.decoder_pipeline = decoder_pipeline
         self.post_processor = post_processor
@@ -59,6 +58,7 @@ class ServerWebsocket(WebSocketClient):
         self.decoder_pipeline.set_eos_handler(self._on_eos)
         self.state = self.STATE_CREATED
         self.last_decoder_message = time.time()
+        self.last_audio_message = None
         self.request_id = "<undefined>"
         self.timeout_decoder = 5
         self.num_segments = 0
@@ -72,7 +72,7 @@ class ServerWebsocket(WebSocketClient):
     def guard_timeout(self):
         global SILENCE_TIMEOUT
         while self.state in [self.STATE_EOS_RECEIVED, self.STATE_CONNECTED, self.STATE_INITIALIZED, self.STATE_PROCESSING]:
-            if (time.time() - self.last_audio_message > NO_AUDIO_TIMEOUT) or (SILENCE_TIMEOUT >= 0 and time.time() - self.last_decoder_message > SILENCE_TIMEOUT):
+            if (self.last_audio_message is not None and time.time() - self.last_audio_message > NO_AUDIO_TIMEOUT) or (SILENCE_TIMEOUT >= 0 and time.time() - self.last_decoder_message > SILENCE_TIMEOUT):
                 logger.warning("%s: More than %d seconds from last decoder hypothesis update, cancelling" % (self.request_id, SILENCE_TIMEOUT))
                 self.finish_request()
                 event = dict(status=common.STATUS_NO_SPEECH)
